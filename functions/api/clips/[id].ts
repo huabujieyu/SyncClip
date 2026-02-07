@@ -44,7 +44,7 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
 
   await context.env.DB.prepare(
     "UPDATE clips SET content = ?, note = ? WHERE id = ?"
-  ).bind(content, note, id).run();
+  ).bind(content, note || null, id).run();
 
   return new Response(JSON.stringify({ success: true }));
 };
