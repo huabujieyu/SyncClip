@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { Header } from './components/Header';
 import { InputArea } from './components/InputArea';
 import { ClipList } from './components/ClipList';
@@ -11,6 +11,7 @@ const App: React.FC = () => {
   const [theme, setTheme] = useState<Theme>('light');
   const [clips, setClips] = useState<Clip[]>([]);
   const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
   const { toasts, addToast, removeToast } = useToast();
   // Store deleted clip temporarily for undo
   const [deletedClip, setDeletedClip] = useState<Clip | null>(null);
@@ -48,17 +49,29 @@ const App: React.FC = () => {
     fetchClips();
     // Poll for updates every 10 seconds (Simple Real-time simulation)
     const interval = setInterval(() => {
-      api.getClips().then(data => {
-        // Only update if IDs are different to prevent jitter
-        setClips(prev => {
-           const prevIds = prev.map(c => c.id).join(',');
-           const newIds = data.map(c => c.id).join(',');
-           return prevIds !== newIds ? data : prev;
-        });
-      });
+      if (!document.hidden) { // Only poll when visible to save resources
+        api.getClips().then(data => {
+          // Only update if IDs are different to prevent jitter
+          setClips(prev => {
+             const prevIds = prev.map(c => c.id).join(',');
+             const newIds = data.map(c => c.id).join(',');
+             return prevIds !== newIds ? data : prev;
+          });
+        }).catch(() => {}); // Silent fail on poll
+      }
     }, 10000);
     return () => clearInterval(interval);
   }, [fetchClips]);
+
+  // Filter clips based on search query
+  const filteredClips = useMemo(() => {
+    if (!searchQuery.trim()) return clips;
+    const query = searchQuery.toLowerCase();
+    return clips.filter(clip => 
+      clip.content.toLowerCase().includes(query) || 
+      (clip.note && clip.note.toLowerCase().includes(query))
+    );
+  }, [clips, searchQuery]);
 
   const handleSubmit = async (content: string, note?: string) => {
     // Optimistic Update
@@ -112,8 +125,6 @@ const App: React.FC = () => {
 
     try {
       // Actually delete after a short delay (or immediately if you handle undo differently)
-      // Here we just delete on server. Ideally, we wait a few seconds before server delete
-      // for true undo, but for simplicity we assume server delete is fast and re-adding is cheap.
       await api.deleteClip(id);
     } catch (error) {
       setClips(prev => [clipToDelete, ...prev].sort((a,b) => b.created_at - a.created_at));
@@ -142,11 +153,18 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen flex flex-col pt-20">
-      <Header theme={theme} toggleTheme={toggleTheme} />
+      <Header 
+        theme={theme} 
+        toggleTheme={toggleTheme} 
+        onRefresh={fetchClips}
+        isRefreshing={loading}
+        searchQuery={searchQuery}
+        setSearchQuery={setSearchQuery}
+      />
       
       <main className="flex-1 max-w-7xl mx-auto w-full px-4">
         <ClipList
-          clips={clips}
+          clips={filteredClips}
           loading={loading}
           onDelete={handleDelete}
           onUpdate={handleUpdate}
