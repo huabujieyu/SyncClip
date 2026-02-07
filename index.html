@@ -77,5 +77,23 @@
         });
       }
     </script>
+    <script>
+      (function() {
+        function checkTailwind() {
+          // 检查是否有 tailwind 生成的样式表，或者 tailwind 对象是否挂载
+          const hasTailwind = window.tailwind || document.querySelector('style[data-tailwind]');
+          if (!hasTailwind) {
+            console.warn('检测到 Tailwind 样式加载异常，正在尝试恢复...');
+            // 如果是因为网络波动没加载出来，尝试刷新
+            if (!window.hasReloaded) {
+              window.hasReloaded = true;
+              location.reload();
+            }
+          }
+        }
+        // 页面加载 2.5 秒后检查
+        setTimeout(checkTailwind, 2500);
+      })();
+    </script>
   </body>
 </html>
