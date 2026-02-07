@@ -1,0 +1,5 @@
+{
+  "name": "SyncClip - Cloudflare D1 Clipboard",
+  "description": "A modern, cross-device clipboard synchronization tool built with React, Cloudflare Pages, and D1 Database.",
+  "requestFramePermissions": []
+}
